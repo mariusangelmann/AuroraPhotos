@@ -79,6 +79,36 @@ struct UploadSettingsView: View {
             }
             
             Section {
+                Toggle("Watch Folder", isOn: $appState.watchFolderEnabled)
+                
+                if appState.watchFolderEnabled {
+                    HStack {
+                        if let path = appState.watchFolderPath {
+                            Text(path)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("No folder selected")
+                                .foregroundStyle(.tertiary)
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Select...") {
+                            selectWatchFolder()
+                        }
+                    }
+                }
+            } header: {
+                Text("Auto Upload")
+            } footer: {
+                Text("New files added to the watched folder will be uploaded automatically.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section {
                 Toggle("Skip Duplicate Check", isOn: $appState.forceUpload)
                 Toggle("Use Storage Quota", isOn: $appState.useQuota)
                 Toggle("Storage Saver Mode", isOn: $appState.storageSaver)
@@ -96,6 +126,19 @@ struct UploadSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+    
+    private func selectWatchFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Select a folder to watch for new photos and videos"
+        panel.prompt = "Select"
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.watchFolderPath = url.path
+        }
     }
 }
 
@@ -143,7 +186,7 @@ struct AboutView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
-                Text("Version 1.0.0")
+                Text("Version 1.0.1")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -152,11 +195,11 @@ struct AboutView: View {
                 .frame(width: 200)
             
             HStack(spacing: 20) {
-                Link(destination: URL(string: "https://github.com")!) {
+                Link(destination: URL(string: "https://github.com/mariusangelmann/AuroraPhotos")!) {
                     Label("GitHub", systemImage: "link")
                 }
                 
-                Link(destination: URL(string: "https://github.com")!) {
+                Link(destination: URL(string: "https://github.com/mariusangelmann/AuroraPhotos/issues")!) {
                     Label("Report Bug", systemImage: "ant")
                 }
             }

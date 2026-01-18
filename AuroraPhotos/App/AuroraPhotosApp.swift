@@ -6,6 +6,7 @@ struct AuroraPhotosApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var uploadManager = UploadManager()
+    @StateObject private var folderWatchService = FolderWatchService()
     @Environment(\.openWindow) private var openWindow
     
     var body: some Scene {
@@ -19,6 +20,13 @@ struct AuroraPhotosApp: App {
                         NSApp.activate(ignoringOtherApps: true)
                         openWindow(id: "onboarding")
                     }
+                    updateFolderWatching()
+                }
+                .onChange(of: appState.watchFolderEnabled) { _, _ in
+                    updateFolderWatching()
+                }
+                .onChange(of: appState.watchFolderPath) { _, _ in
+                    updateFolderWatching()
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -43,6 +51,16 @@ struct AuroraPhotosApp: App {
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+    }
+    
+    private func updateFolderWatching() {
+        if appState.watchFolderEnabled, let path = appState.watchFolderPath {
+            folderWatchService.startWatching(path: path, recursive: appState.recursiveScan) { [uploadManager, appState] urls in
+                uploadManager.addFiles(urls: urls, appState: appState)
+            }
+        } else {
+            folderWatchService.stopWatching()
+        }
     }
 }
 
@@ -96,6 +114,12 @@ class AppState: ObservableObject {
             updateDockVisibility()
         }
     }
+    @Published var watchFolderEnabled: Bool {
+        didSet { UserDefaults.standard.set(watchFolderEnabled, forKey: "watchFolderEnabled") }
+    }
+    @Published var watchFolderPath: String? {
+        didSet { UserDefaults.standard.set(watchFolderPath, forKey: "watchFolderPath") }
+    }
     
     init() {
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
@@ -114,6 +138,8 @@ class AppState: ObservableObject {
         self.playSounds = UserDefaults.standard.object(forKey: "playSounds") as? Bool ?? false
         self.launchAtLogin = UserDefaults.standard.bool(forKey: "launchAtLogin")
         self.showInDock = UserDefaults.standard.bool(forKey: "showInDock")
+        self.watchFolderEnabled = UserDefaults.standard.bool(forKey: "watchFolderEnabled")
+        self.watchFolderPath = UserDefaults.standard.string(forKey: "watchFolderPath")
         
         syncLaunchAtLoginState()
     }
